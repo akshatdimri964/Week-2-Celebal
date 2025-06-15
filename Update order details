@@ -1,0 +1,33 @@
+CREATE PROCEDURE UpdateOrderDetails 
+    @OrderID INT,
+    @ProductID INT,
+    @UnitPrice MONEY = NULL,
+    @Quantity INT = NULL,
+    @Discount FLOAT = NULL
+AS
+BEGIN
+    DECLARE @OldQty INT
+
+    SELECT @OldQty = Quantity
+    FROM [Order Details]
+    WHERE OrderID = @OrderID AND ProductID = @ProductID
+
+    IF @OldQty IS NULL
+    BEGIN
+        PRINT 'Order/Product not found'
+        RETURN
+    END
+
+    DECLARE @NewQty INT = ISNULL(@Quantity, @OldQty)
+
+    UPDATE [Order Details]
+    SET 
+        UnitPrice = ISNULL(@UnitPrice, UnitPrice),
+        Quantity = @NewQty,
+        Discount = ISNULL(@Discount, Discount)
+    WHERE OrderID = @OrderID AND ProductID = @ProductID
+
+    UPDATE Products
+    SET UnitsInStock = UnitsInStock + @OldQty - @NewQty
+    WHERE ProductID = @ProductID
+END
