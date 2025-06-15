@@ -1,0 +1,42 @@
+CREATE PROCEDURE InsertOrderDetails 
+    @OrderID INT,
+    @ProductID INT,
+    @UnitPrice MONEY = NULL,
+    @Quantity INT,
+    @Discount FLOAT = 0
+AS
+BEGIN
+    DECLARE @AvailableQty INT, @ReorderLevel INT, @DefaultPrice MONEY
+
+    SELECT 
+        @AvailableQty = UnitsInStock,
+        @ReorderLevel = ReorderLevel,
+        @DefaultPrice = UnitPrice
+    FROM Products
+    WHERE ProductID = @ProductID
+
+    IF @AvailableQty IS NULL OR @AvailableQty < @Quantity
+    BEGIN
+        PRINT 'Insufficient stock. Order not placed.'
+        RETURN
+    END
+
+    IF @UnitPrice IS NULL
+        SET @UnitPrice = @DefaultPrice
+
+    INSERT INTO [Order Details](OrderID, ProductID, UnitPrice, Quantity, Discount)
+    VALUES (@OrderID, @ProductID, @UnitPrice, @Quantity, @Discount)
+
+    IF @@ROWCOUNT = 0
+    BEGIN
+        PRINT 'Failed to place the order. Please try again.'
+        RETURN
+    END
+
+    UPDATE Products
+    SET UnitsInStock = UnitsInStock - @Quantity
+    WHERE ProductID = @ProductID
+
+    IF @AvailableQty - @Quantity < @ReorderLevel
+        PRINT 'Stock below reorder level.'
+END
